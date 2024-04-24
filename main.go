@@ -8,16 +8,20 @@ import (
 	"sync"
 )
 
-const P_SAMPLES = 100_000
+const SAMPLES = 100_000
 
-func rollN(C float64) int64 {
+// Takes a C-value as the initial probability, and simulates a "dice roll".
+// If the roll succeeds, the function returns the number of dice rolls that happened.
+// If the roll doesn't succeed, the probability increases by C, and another dice roll occurs.
+// Eventually, the probability will exceed 1.0, and the dice roll is forced to succeed.
+func trialCValue(C float64) int64 {
 	if C <= 0 {
 		panic("C must be greater than zero")
 	} else if C > 1 {
 		return 1
 	}
 
-	N := int64(0)
+	N := int64(1)
 
 	for {
 		if rand.Float64() <= C*float64(N) {
@@ -27,25 +31,16 @@ func rollN(C float64) int64 {
 	}
 }
 
+// Approximates the expected value (EV) for a given C-value.
 func calcEV(C float64) float64 {
 	sum := int64(0)
 
-	for i := 0; i < P_SAMPLES; i++ {
-		sum += rollN(C)
+	for i := 0; i < SAMPLES; i++ {
+		sum += trialCValue(C)
 	}
 
-	return float64(sum) / float64(P_SAMPLES)
+	return float64(sum) / float64(SAMPLES)
 }
-
-// func calcC(P float64) float64 {
-// 	a := -2.266e-00
-// 	b := 3.959e+00
-// 	c := -1.208e+00
-// 	d := 5.511e-01
-// 	e := -2.854e-02
-
-// 	return a*math.Pow(P, 4) + b*math.Pow(P, 3) + c*math.Pow(P, 2) + d*P + e
-// }
 
 func main() {
 	type Row struct {
@@ -65,6 +60,9 @@ func main() {
 	cStep := 1e-10
 	C := float64(0)
 
+	// Computes the expected value for a C-value and then adds the result to an array.
+	// Each iteration the C-value increases by a small step amount. The step amount will
+	// also increase over time to maintain a specific precision.
 	for C < 1 {
 		C = cStep * float64(i)
 
