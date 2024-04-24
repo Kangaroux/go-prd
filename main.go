@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-const P_SAMPLES = 1_000
+const P_SAMPLES = 100_000
 
 func rollN(C float64) int64 {
 	if C <= 0 {
