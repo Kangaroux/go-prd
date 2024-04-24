@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
 )
 
-const P_SAMPLES = 100
+const P_SAMPLES = 1_000
 
 func rollN(C float64) int64 {
 	if C <= 0 {
@@ -54,18 +55,23 @@ func main() {
 	}
 
 	data := []Row{}
-	wg := sync.WaitGroup{}
-	initialIncr := float64(0.000001)
-	incr := initialIncr
-	C := float64(0)
-	i := 0
 	mut := sync.Mutex{}
+	wg := sync.WaitGroup{}
 
-	for C < 0.01 {
-		if i == 100 || i == 1000 || i == 10000 {
-			incr = initialIncr * float64(i/10)
+	precision := 3
+	iNextStepIncrease := int(math.Pow(10, float64(precision)))
+	i := 1
+	iStep := 1
+	cStep := 1e-10
+	C := float64(0)
+
+	for C < 1 {
+		C = cStep * float64(i)
+
+		if i == iNextStepIncrease {
+			iStep *= 10
+			iNextStepIncrease *= 10
 		}
-		C += incr
 
 		wg.Add(1)
 		go func(C float64, i int) {
@@ -76,13 +82,13 @@ func main() {
 			mut.Unlock()
 		}(C, i)
 
-		i++
+		i += iStep
 	}
 
 	wg.Wait()
 	sort.Slice(data, func(i, j int) bool { return data[i].C < data[j].C })
 
 	for _, row := range data {
-		fmt.Printf("%f,%f,%f\n", row.C, row.P, row.EV)
+		fmt.Printf("%.12f,%.10f,%f\n", row.P, row.C, row.EV)
 	}
 }
