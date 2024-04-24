@@ -54,17 +54,17 @@ func calcEV(C float64) float64 {
 }
 
 func main() {
-	type Row struct {
+	type Result struct {
 		C  float64
 		P  float64
 		EV float64
 	}
 
-	data := []Row{}
-	mut := sync.Mutex{}
-	wg := sync.WaitGroup{}
+	results := []Result{}
+	resultMutex := sync.Mutex{}
+	resultWaitGroup := sync.WaitGroup{}
 
-	iNextStepIncrease := int(math.Pow(10, float64(PRECISION)))
+	nextStepIncrease := int(math.Pow(10, float64(PRECISION)))
 	i := 1
 	iStep := 1
 	C := float64(0)
@@ -76,34 +76,34 @@ func main() {
 		C = INITIAL_C_VALUE * float64(i)
 
 		// The precision of the next C-value will be too high
-		if i == iNextStepIncrease {
+		if i == nextStepIncrease {
 			// Increasing the step by a factor of 10 shifts everything over one digit
 			iStep *= 10
 			// After 10 iterations a new digit will be introduced (1, 2, 3, ..., 9, 10)
 			// and the precision will need to be adjusted again
-			iNextStepIncrease *= 10
+			nextStepIncrease *= 10
 		}
 
-		wg.Add(1)
+		resultWaitGroup.Add(1)
 
 		// Run the EV calc in parallel
 		go func(C float64, i int) {
-			defer wg.Done()
+			defer resultWaitGroup.Done()
 			ev := calcEV(C)
-			mut.Lock()
-			data = append(data, Row{C, 1 / ev, ev})
-			mut.Unlock()
+			resultMutex.Lock()
+			results = append(results, Result{C, 1 / ev, ev})
+			resultMutex.Unlock()
 		}(C, i)
 
 		i += iStep
 	}
 
-	wg.Wait()
+	resultWaitGroup.Wait()
 
 	// Sort results by C-value. They may be out of order due to running in parallel
-	sort.Slice(data, func(i, j int) bool { return data[i].C < data[j].C })
+	sort.Slice(results, func(i, j int) bool { return results[i].C < results[j].C })
 
-	for _, row := range data {
+	for _, row := range results {
 		fmt.Printf("%.12f,%.12f,%f\n", row.C, row.P, row.EV)
 	}
 }
