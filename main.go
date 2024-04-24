@@ -8,7 +8,18 @@ import (
 	"sync"
 )
 
-const SAMPLES = 100_000
+const (
+	// The number of samples for each C-value. Smaller = fast, larger = better approximation
+	EV_SAMPLES = 200
+
+	// The precision of C-values. Smaller = fast, larger = more data
+	PRECISION = 3
+
+	// The C-value that the simulation will start at, as well as the amount the C-value
+	// is incremented by each iteration. The number of iterations needed starts to increase
+	// dramatically for C-values smaller than 1e-07
+	INITIAL_C_VALUE = 1e-08
+)
 
 // Takes a C-value as the initial probability, and simulates a "dice roll".
 // If the roll succeeds, the function returns the number of dice rolls that happened.
@@ -35,11 +46,11 @@ func trialCValue(C float64) int64 {
 func calcEV(C float64) float64 {
 	sum := int64(0)
 
-	for i := 0; i < SAMPLES; i++ {
+	for i := 0; i < EV_SAMPLES; i++ {
 		sum += trialCValue(C)
 	}
 
-	return float64(sum) / float64(SAMPLES)
+	return float64(sum) / float64(EV_SAMPLES)
 }
 
 func main() {
@@ -53,25 +64,29 @@ func main() {
 	mut := sync.Mutex{}
 	wg := sync.WaitGroup{}
 
-	precision := 3
-	iNextStepIncrease := int(math.Pow(10, float64(precision)))
+	iNextStepIncrease := int(math.Pow(10, float64(PRECISION)))
 	i := 1
 	iStep := 1
-	cStep := 1e-10
 	C := float64(0)
 
-	// Computes the expected value for a C-value and then adds the result to an array.
-	// Each iteration the C-value increases by a small step amount. The step amount will
-	// also increase over time to maintain a specific precision.
+	// Computes the expected value for a range of C-values. The precision of the
+	// C-value is controlled in order to obtain a wide range of datapoints in a
+	// reasonable amount of time
 	for C < 1 {
-		C = cStep * float64(i)
+		C = INITIAL_C_VALUE * float64(i)
 
+		// The precision of the next C-value will be too high
 		if i == iNextStepIncrease {
+			// Increasing the step by a factor of 10 shifts everything over one digit
 			iStep *= 10
+			// After 10 iterations a new digit will be introduced (1, 2, 3, ..., 9, 10)
+			// and the precision will need to be adjusted again
 			iNextStepIncrease *= 10
 		}
 
 		wg.Add(1)
+
+		// Run the EV calc in parallel
 		go func(C float64, i int) {
 			defer wg.Done()
 			ev := calcEV(C)
@@ -84,9 +99,11 @@ func main() {
 	}
 
 	wg.Wait()
+
+	// Sort results by C-value. They may be out of order due to running in parallel
 	sort.Slice(data, func(i, j int) bool { return data[i].C < data[j].C })
 
 	for _, row := range data {
-		fmt.Printf("%.12f,%.10f,%f\n", row.P, row.C, row.EV)
+		fmt.Printf("%.12f,%.12f,%f\n", row.C, row.P, row.EV)
 	}
 }
