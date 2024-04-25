@@ -34,17 +34,25 @@ go run . > out.csv
 
 ## A Brief Overview of PRD
 
-PRD seeks to address the problem of randomness in multiplayer games where a player can be very lucky or very unlucky. This can lead to an overwhelming advantage in some cases, and is generally not fun for the other players. PRD was first introduced in Warcraft 3 and later adopted in Dota 2.
+PRD was first introduced in Warcraft 3 and later adopted in Dota 2. It seeks to address the issue of unfair randomness in multiplayer games where players can have streaks of being extremely lucky or unlucky. Both cases can lead to an unfair advantage and a frustrating experience.
 
-Unlike uniform distributions, where each coin flip or dice roll is independent, PRD uses dependent randomness. Every time an event doesn't occur, the probability increases linearly. The probability of the first attempt is low, and increases until the probability eventually exceeds 100%, which forces the event to occur.
+Unlike uniform distributions where each coin flip or dice roll is independent, PRD uses _dependent randomness_. The probability of an event occuring is based on how many times in a row it has failed to occur. As the number of attempts increases, so does the probability. To offset the fact that the probability increases, the initial probability is lowered.
 
-One important feature of PRD is that -- averaged over a large sample set -- the probability of an event occuring is the same as a uniform distribution. The differences are that:
+The probability of an event happening starts at an initial value called the **C-Value**. Every time the event fails to occur, the probability of the next attempt increases by the C-value. This continues until the event occurs, or the probability exceeds 100% (at which point it _must_ occur). Once it occurs, the probability resets back to the initial C-value.
+
+In practice, this means two things:
 
 1. Lucky streaks are unlikely due to the initial probability being lower
-2. Unlucky streaks are reduced/impossible. An event _must_ occur after a certain number of attempts. The probability of it occuring is also skewed towards the lower end of the distribution
+2. Unlucky streaks are reduced/impossible. An event _must_ occur after a certain number of attempts
 
-Consider an event with a 25% chance of occuring. In both distributions the expected number of attempts is 4. However, with PRD, the upper limit for attempts is 11, whereas a uniform distribution has no upper limit -- the event could simply never occur.
+This chart shows the distributions for an event with a 25% chance of occuring. (Image source: [Dota2 Wiki](https://dota2.fandom.com/wiki/Random_Distribution))
 
 ![Bar graph comparing a PRD and a uniform distribution.](https://static.wikia.nocookie.net/dota2_gamepedia/images/8/8b/AttacksUntilNextProc25.jpg/revision/latest?cb=20130505045408)
 
-Image source: [Dota2 Wiki](https://dota2.fandom.com/wiki/Random_Distribution)
+With true randomness, there is a 25% chance for the first trial. Meanwhile, PRD uses a ~8.5% chance, or 3 times less likely for the event to occur on the first try.
+
+PRD also has no values past the 10th trial -- at that point the probability has exceeded 100% and the event is guaranteed to occur. While not shown, the number of trials continues indefinitely for the uniform distribution.
+
+It's also no coincidence that the PRD distribution is concentrated around the 4th trial. Using a C-value of ~8.5% will average out to a 25% chance given a sufficient number of samples.
+
+If you check the included [sample dataset](./sample/), you'll notice that a C-value of ~0.085 would fit perfectly between 0.08 and 0.09 in the table.
