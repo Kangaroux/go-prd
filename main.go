@@ -25,10 +25,10 @@ const (
 // If the roll succeeds, the function returns the number of dice rolls that happened.
 // If the roll doesn't succeed, the probability increases by C, and another dice roll occurs.
 // Eventually, the probability will exceed 1.0, and the dice roll is forced to succeed.
-func trialCValue(C float64) int64 {
+func sampleCValue(C float64) int64 {
 	if C <= 0 {
 		panic("C must be greater than zero")
-	} else if C > 1 {
+	} else if C >= 1 {
 		return 1
 	}
 
@@ -47,7 +47,7 @@ func calcEV(C float64) float64 {
 	sum := int64(0)
 
 	for i := 0; i < EV_SAMPLES; i++ {
-		sum += trialCValue(C)
+		sum += sampleCValue(C)
 	}
 
 	return float64(sum) / float64(EV_SAMPLES)
